@@ -1,25 +1,37 @@
 # Song Maker+
 
-A lightweight, client-side music sequencer inspired by the colorful grid concept of Chrome Music Lab Song Maker. **This is an original implementation, not a fork of the official Song Maker app** (its source isn't in the public Chrome Music Lab repository). No Google source code is included.
+A browser-based music sequencer with the recognizable white grid, rainbow notes, and cyan transport controls inspired by Chrome Music Lab Song Maker. **This is an independent implementation, not a fork of Google's proprietary Song Maker source, and is not affiliated with Google.**
 
-## Features
-- Multiple instrument, drum, and user-uploaded audio tracks
-- Tap/click or drag to paint notes in the 16th-note sequencer
-- Piano, synth, bass, bell, pluck and drum synthesis with the Web Audio API
-- WAV, MP3, OGG, or other browser-supported audio samples imported locally
-- Tempo, length, track volume, mute/solo, master volume, song looping
-- Offline WAV export (44.1 kHz, 16-bit stereo)
-- Save/load full project as JSON, including uploaded sample data
-- Responsive layout for desktop, tablet, and mobile
+## Make music
 
-## Run
-Open `index.html` in Chrome, Edge, or Safari, or serve the folder over HTTP using `python3 -m http.server 8080`. Click **Play** to initialize audio. Nothing is uploaded to a server.
+- Tap or drag across the melody grid to place notes.
+- Use the two percussion lanes for hi-hats and kick drums.
+- Change the melody sound with the **Instrument** selector.
+- Click **Tracks** to create melodies, drum tracks, and sample tracks; change track volume, mute, or solo them.
+- Click **Upload** to load an audio file (WAV, MP3, or OGG, under 20 MB) into a sample track.
+- Click **Settings** to change song length, volume, or WAV export repeats.
+- Click **Save** to save a JSON project that includes uploaded audio.
+- Click **Export WAV** to render an audio file in your browser.
+- Press the Spacebar to play or stop when a text entry control is not active.
 
-## Host on GitHub Pages
-Create a repository named `SongMaker-`, upload `index.html`, `styles.css`, and `app.js` into its root, then open **Settings → Pages → Deploy from a branch → main / (root)**.
+Everything runs in your browser without a backend or account. Projects and uploaded sounds are not uploaded to a server. Serve these files as static assets (including on GitHub Pages).
 
-## Notes
-JSON containing embedded audio samples can be large. The application loads only audio formats supported by your browser. Playback requires a user gesture in most browsers. WAV rendering can be memory-intensive for long sequences.
+## Design skill
 
-## License
-Song Maker+ original code is released under MIT (see LICENSE). Chrome Music Lab is a separate Google project. This app is unaffiliated with Google.
+The reusable agent skill [Google Song Maker web style](skills/google-song-maker-web-style/SKILL.md) defines the visual appearance, interface-writing and accessibility guidelines, HTML/CSS conventions, and test checklist used for this page. It draws on:
+
+- [Chrome Music Lab Song Maker](https://musiclab.chromeexperiments.com/Song-Maker/) as the **visual reference**.
+- [Google developer documentation style guide](https://developers.google.com/style) for UI wording and accessibility.
+- [Google HTML/CSS Style Guide](https://google.github.io/styleguide/htmlcssguide.html) for code conventions.
+
+Google's developer documentation guide is primarily **editorial**, not a website theme. The skill uses the actual Chrome Music Lab UI to preserve the requested look.
+
+## Development
+
+- Open `index.html` in a browser or serve the directory using any static server.
+- Run `node --check app.js` to check JavaScript syntax.
+- UI uses plain HTML, CSS, and JavaScript with Web Audio API; no dependencies or build step.
+
+## Credits and license
+
+Independent, noncommercially branded Song Maker-inspired implementation. No Chrome Music Lab source code or Google visual assets are included. This project's source is licensed under MIT; see [LICENSE](LICENSE).
