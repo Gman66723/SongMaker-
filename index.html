@@ -1,11 +1,104 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#101629"><title>Song Maker+ — Make something amazing</title><link rel="stylesheet" href="styles.css"></head>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="description" content="Create music with a colorful note grid, your own beats, and uploaded sounds.">
+  <title>Song Maker+ — Music Lab-inspired sequencer</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
 <body>
-<header class="top"><div class="logo"><span class="logo-mark">♫</span><div><strong>Song Maker<span class="plus">+</span></strong><small>your browser music studio</small></div></div><div class="head-actions"><button id="newBtn" class="outline">New</button><button id="openBtn" class="outline">Open project</button><button id="saveBtn" class="outline">Save project</button><button id="exportBtn" class="accent">↓ Export WAV</button></div></header>
-<div class="app"><aside class="sidebar"><h3>TRACKS <span id="trackCount"></span></h3><div id="tracks" class="tracks"></div><div class="add-group"><button id="addInstrument" class="add">＋ Instrument</button><button id="addDrums" class="add">＋ Beat track</button><button id="addSample" class="add purple">＋ Upload sound</button></div><div class="help"><b>Quick tips</b><p>Tap a square to place or remove a note. Switch tracks to build layers. Upload WAV, MP3, or OGG samples for your own sounds.</p><p>Spacebar: play/pause · Drag across the grid to paint notes.</p></div></aside>
-<main><section class="transport"><div class="transport-row"><button id="playBtn" class="play" aria-label="Play">▶</button><button id="stopBtn" class="stop" aria-label="Stop">■</button><div class="control"><label for="bpm">TEMPO <span id="bpmValue">120</span> BPM</label><input id="bpm" type="range" min="50" max="220" value="120"></div><div class="control"><label for="bars">LENGTH</label><select id="bars"><option value="16">1 bar · 16 steps</option><option value="32" selected>2 bars · 32 steps</option><option value="64">4 bars · 64 steps</option></select></div><div class="control"><label for="repeat">EXPORT LOOPS</label><select id="repeat"><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select></div><div class="control master"><label for="master">MASTER VOLUME</label><input id="master" type="range" min="0" max="100" value="80"></div></div><div class="playline"><div id="beatDots" class="dots"></div><span class="helper-status" id="status">Ready to make music</span></div></section>
-<section class="editor"><div class="editor-head"><div><div class="eyebrow">SEQUENCER</div><h1 id="editorTitle">Piano</h1><p id="editorSubtitle">Tap any square to add a note</p></div><div class="editor-tools"><label class="control inline">SOUND <select id="voice"><option value="piano">Piano</option><option value="synth">Synth</option><option value="bass">Bass</option><option value="bell">Bell</option><option value="pluck">Pluck</option></select></label><button id="clearTrack" class="outline danger">Clear track</button></div></div><div id="gridScroll" class="grid-scroll"><div id="stepGrid" class="step-grid" aria-label="Note sequencer"></div></div><div class="grid-footer"><span>Each column is a 16th note</span><span id="noteCount">0 notes</span></div></section>
-<section class="bottom"><div><b>Make it your sound.</b><p>No login, no installation. Your music runs in your browser.</p></div><div class="bottom-buttons"><button id="demoBtn" class="outline">Load demo beat</button><button id="shareBtn" class="outline">Export project JSON</button></div></section></main></div>
-<input id="audioFile" type="file" accept="audio/*,.wav,.mp3,.ogg" hidden><input id="projectFile" type="file" accept=".json,application/json" hidden>
-<div id="toast" role="status" aria-live="polite"></div>
-<script src="app.js"></script></body></html>
+  <header class="top">
+    <div class="top-left">
+      <button id="newBtn" class="text-button" type="button" title="Start a new song">↻ <span>Restart</span></button>
+    </div>
+    <h1>SONG MAKER<span class="plus">+</span></h1>
+    <div class="top-right">
+      <button id="openBtn" class="text-button" type="button" title="Open a saved project">Open</button>
+      <button id="aboutBtn" class="text-button" type="button" aria-expanded="false" aria-controls="aboutPanel">ⓘ <span>About</span></button>
+    </div>
+  </header>
+
+  <main class="app">
+    <div class="workspace">
+      <div class="context-row">
+        <span id="editorTitle">Piano</span>
+        <span id="editorSubtitle">Tap or drag to add notes</span>
+      </div>
+      <div id="gridScroll" class="grid-scroll" tabindex="0" aria-label="Scrollable song editor">
+        <div id="stepGrid" class="step-grid" aria-label="Melody note grid"></div>
+        <div id="drumStrip" class="drum-strip" aria-label="Drum and percussion grid"></div>
+      </div>
+      <p class="grid-caption" id="noteCount">0 notes</p>
+    </div>
+
+    <div class="control-area">
+      <div class="transport">
+        <button id="playBtn" class="round-button play" type="button" aria-label="Play">▶</button>
+        <button id="stopBtn" class="round-button stop" type="button" aria-label="Stop" title="Stop">■</button>
+        <div class="instrument-control">
+          <label for="voice">Instrument</label>
+          <select id="voice" aria-label="Instrument sound">
+            <option value="piano">Piano</option>
+            <option value="synth">Synth</option>
+            <option value="bass">Bass</option>
+            <option value="bell">Bell</option>
+            <option value="pluck">Pluck</option>
+          </select>
+        </div>
+        <div class="tempo-control">
+          <label for="bpm">Tempo</label>
+          <input id="bpm" type="range" min="50" max="220" value="120">
+          <output for="bpm" id="bpmValue">120</output>
+        </div>
+        <div class="toolbar">
+          <button id="uploadBtn" class="tool-button" type="button" title="Upload an audio sample"><span class="tool-icon" aria-hidden="true">↑</span><span>Upload</span></button>
+          <button id="tracksToggle" class="tool-button" type="button" aria-expanded="false" aria-controls="sidebar" title="Add or edit tracks"><span class="tool-icon" aria-hidden="true">♫</span><span>Tracks</span></button>
+          <button id="settingsToggle" class="tool-button" type="button" aria-expanded="false" aria-controls="settingsPanel" title="Change song settings"><span class="tool-icon" aria-hidden="true">⚙</span><span>Settings</span></button>
+          <button id="saveBtn" class="tool-button" type="button" title="Save a project file"><span class="tool-icon" aria-hidden="true">✓</span><span>Save</span></button>
+        </div>
+      </div>
+      <div class="secondary-actions">
+        <span id="status" role="status" aria-live="polite">Ready</span>
+        <div class="secondary-buttons">
+          <button id="exportBtn" class="line-button" type="button">Export WAV</button>
+          <button id="demoBtn" class="line-button" type="button">Demo beat</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div class="overlay" id="overlay" hidden></div>
+  <aside class="side-panel" id="sidebar" aria-label="Tracks" hidden>
+    <div class="panel-heading"><h2>Tracks <span id="trackCount"></span></h2><button class="close-button" type="button" data-close-panel aria-label="Close tracks">×</button></div>
+    <p class="panel-explain">Add instruments and beats to your song. Select a track to edit its notes.</p>
+    <div id="tracks" class="tracks"></div>
+    <div class="add-group">
+      <button id="addInstrument" class="add-button" type="button">+ Instrument</button>
+      <button id="addDrums" class="add-button" type="button">+ Beat track</button>
+      <button id="addSample" class="add-button" type="button">+ Upload a sound</button>
+    </div>
+    <p class="panel-note">Use WAV, MP3, or OGG files up to 20 MB. Uploads stay in your browser until you save a project.</p>
+  </aside>
+  <section class="settings-panel" id="settingsPanel" aria-label="Song settings" hidden>
+    <div class="panel-heading"><h2>Settings</h2><button class="close-button" type="button" data-close-panel aria-label="Close settings">×</button></div>
+    <div class="settings-row"><label for="bars">Song length</label><select id="bars"><option value="16">1 bar</option><option value="32" selected>2 bars</option><option value="64">4 bars</option></select></div>
+    <div class="settings-row"><label for="repeat">Export repeats</label><select id="repeat"><option value="1" selected>1 time</option><option value="2">2 times</option><option value="4">4 times</option></select></div>
+    <div class="settings-row"><label for="master">Volume</label><input id="master" type="range" min="0" max="100" value="80"></div>
+    <div class="settings-row"><label for="clearTrack">Selected track</label><button id="clearTrack" class="line-button" type="button">Clear notes</button></div>
+    <div class="settings-row"><label for="shareBtn">Project copy</label><button id="shareBtn" class="line-button" type="button">Download JSON</button></div>
+  </section>
+  <section class="about-panel" id="aboutPanel" aria-label="About Song Maker+" hidden>
+    <div class="panel-heading"><h2>About Song Maker+</h2><button class="close-button" type="button" data-close-panel aria-label="Close about">×</button></div>
+    <p>Make melodies and beats by filling in squares. Change instruments, add tracks, and use your own audio files.</p>
+    <p>Inspired by the playful interface of Chrome Music Lab Song Maker. This project is independently developed and is not affiliated with Google.</p>
+    <p>Spacebar plays or stops the song. You can save projects as JSON and export your music as WAV.</p>
+  </section>
+
+  <input id="audioFile" type="file" accept="audio/*,.wav,.mp3,.ogg" hidden>
+  <input id="projectFile" type="file" accept=".json,application/json" hidden>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>
