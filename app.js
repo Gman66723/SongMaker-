@@ -2,7 +2,8 @@
 // Song Maker+ — original Web Audio grid sequencer. No frameworks or external assets.
 (() => {
 const $ = id => document.getElementById(id);
-const palette = ['#ff89a4','#6fd6f8','#f3c66c','#b997ff','#73e7af','#ffa66a','#78aefc'];
+const palette = ['#e94b87','#25b5e9','#edc63c','#7a65d8','#1d927d','#f9a047','#4c68c7'];
+const pitchColors = ['#b64fbb','#8054c6','#4c5bd2','#388cba','#168e82','#71b75d','#b4cb41','#f4d43a','#ffa246','#d94f69','#bd4db3','#7761c4','#e34866'];
 const pitches = Array.from({length: 13},(_,i) => 72-i);
 const noteNames = ['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
 const drumNames = ['Kick','Snare','Closed hat','Clap'];
@@ -26,9 +27,11 @@ function initDemo(){tracks=[];nextId=1; const p=track('instrument','Bright piano
  for(const [s,r] of [[0,12],[2,8],[4,5],[6,8],[8,10],[10,7],[12,3],[14,7],[16,12],[18,8],[20,5],[22,8],[24,10],[26,7],[28,5],[30,3]])p.notes[r][s]=true;
  const d=track('drums','Drum machine');for(let s=0;s<32;s++){if(s%8===0)d.notes[0][s]=true;if(s%8===4)d.notes[1][s]=true;if(s%2===0)d.notes[2][s]=true;if(s===15||s===31)d.notes[3][s]=true;}
  selectedId=p.id;render();}
-function render(){renderTracks();renderEditor();renderDots();}
+function render(){renderTracks();renderEditor();renderDrumStrip();renderDots();}
 function renderTracks(){const host=$('tracks');host.replaceChildren();$('trackCount').textContent=tracks.length;
  for(const t of tracks){const card=document.createElement('div');card.className='track'+(t.id===selectedId?' active':'');card.style.setProperty('--trackcolor',t.color);
+ card.setAttribute('tabindex','0');card.setAttribute('role','group');card.setAttribute('aria-label','Track '+t.name+'. Press Enter to edit.');
+ card.addEventListener('keydown',e=>{if(e.target===card&&(e.key==='Enter'||e.key===' ')){e.preventDefault();selectedId=t.id;render();closePanels();}});
  card.innerHTML='<div class="track-main"><span class="track-icon"></span><span class="track-title"></span><div class="small-actions"><button class="mini mute" title="Mute">M</button><button class="mini solo" title="Solo">S</button><button class="mini delete" title="Delete track">×</button></div></div><div class="track-sub"></div><label class="track-volume">VOL <input aria-label="Track volume" type="range" min="0" max="100"></label>';
  card.querySelector('.track-icon').textContent=t.type==='drums'?'🥁':t.type==='sample'?'◉':'♫';card.querySelector('.track-title').textContent=t.name;
  card.querySelector('.track-sub').textContent=t.type==='drums'?'4 drum sounds':t.type==='sample'?(t.sampleBuffer?'Imported audio':'Upload sample'):t.voice.charAt(0).toUpperCase()+t.voice.slice(1)+' instrument';
@@ -36,24 +39,37 @@ function renderTracks(){const host=$('tracks');host.replaceChildren();$('trackCo
  m.addEventListener('click',e=>{e.stopPropagation();t.mute=!t.mute;renderTracks()});s.addEventListener('click',e=>{e.stopPropagation();t.solo=!t.solo;renderTracks()});
  card.querySelector('.delete').addEventListener('click',e=>{e.stopPropagation();if(tracks.length===1){toast('Keep at least one track');return;}tracks=tracks.filter(x=>x!==t);if(selectedId===t.id)selectedId=tracks[0].id;render();});
  const slider=card.querySelector('input');slider.value=Math.round(t.volume*100);slider.addEventListener('input',()=>{t.volume=Number(slider.value)/100});
- card.addEventListener('click',e=>{if(e.target.tagName==='INPUT')return;selectedId=t.id;render()});host.appendChild(card);
+ card.addEventListener('click',e=>{if(e.target.closest('button')||e.target.tagName==='INPUT')return;selectedId=t.id;render();closePanels()});host.appendChild(card);
  }}
 function renderEditor(){const t=currentTrack();if(!t)return;
  $('editorTitle').textContent=t.name;$('editorSubtitle').textContent=t.type==='sample'?'Tap a square to trigger your uploaded sound':t.type==='drums'?'Program kicks, snares, hi-hats and claps':'Click or drag to paint notes';
- const voice=$('voice');voice.closest('label').hidden=t.type!=='instrument';voice.value=t.voice;
+ const voice=$('voice');voice.closest('.instrument-control').hidden=t.type!=='instrument';voice.value=t.voice;
  const g=$('stepGrid');g.style.setProperty('--steps',steps);g.replaceChildren();g.style.setProperty('--cellcolor',t.color);const names=rowNames(t);
  for(let r=0;r<names.length;r++){
  const label=document.createElement('div');label.className='rlabel';label.textContent=names[r];g.appendChild(label);
  for(let s=0;s<steps;s++){
- const c=document.createElement('button');c.type='button';c.className='cell'+(s%4===0?' beat':'')+(s%16===0?' measure':'')+(t.notes[r][s]?' on':'');c.dataset.r=r;c.dataset.s=s;c.setAttribute('aria-label',names[r]+' step '+(s+1));c.setAttribute('aria-pressed',String(t.notes[r][s]));g.appendChild(c);
+ const c=document.createElement('button');c.type='button';c.className='cell'+(s%4===0?' beat':'')+(s%16===0?' measure':'')+(t.notes[r][s]?' on':'');c.dataset.r=r;c.dataset.s=s;c.style.setProperty('--cellcolor',t.type==='instrument'?pitchColors[r%pitchColors.length]:t.color);c.setAttribute('aria-label',names[r]+' step '+(s+1));c.setAttribute('aria-pressed',String(t.notes[r][s]));g.appendChild(c);
  }}
  updateNoteCount();renderPlayhead(renderedStep);
 }
 function updateNoteCount(){const t=currentTrack();const n=t.notes.reduce((sum,row)=>sum+row.slice(0,steps).filter(Boolean).length,0);$('noteCount').textContent=n+' notes';}
-function renderDots(){const d=$('beatDots');d.replaceChildren();for(let i=0;i<steps/4;i++){const el=document.createElement('div');el.className='dot'+(Math.floor(renderedStep/4)===i?' current':'');d.appendChild(el);}}
-function setCell(c,value){const t=currentTrack();if(!c||!c.classList.contains('cell'))return;const r=Number(c.dataset.r),s=Number(c.dataset.s);if(!t.notes[r]||s>=steps||t.notes[r][s]===value)return;t.notes[r][s]=value;c.classList.toggle('on',value);c.setAttribute('aria-pressed',String(value));updateNoteCount();if(value)preview(t,r);}
-$('stepGrid').addEventListener('pointerdown',e=>{const c=e.target.closest('.cell');if(!c)return;e.preventDefault();painting=true;activePointer=e.pointerId;paintTo=!c.classList.contains('on');setCell(c,paintTo);});
-$('stepGrid').addEventListener('pointermove',e=>{if(!painting||e.pointerId!==activePointer)return;const hit=document.elementFromPoint(e.clientX,e.clientY);if(hit&&$('stepGrid').contains(hit))setCell(hit.closest('.cell'),paintTo);});
+function renderDrumStrip(){
+ const host=$('drumStrip');host.replaceChildren();host.style.setProperty('--steps',steps);
+ const t=tracks.find(x=>x.type==='drums');if(!t){host.hidden=true;return;}host.hidden=false;
+ for(const r of [2,0])for(let s=0;s<steps;s++){
+  const c=document.createElement('button');c.type='button';
+  c.className='cell drum-note'+(r===2?' hat':'')+(s%4===0?' beat':'')+(s%16===0?' measure':'')+(t.notes[r][s]?' on':'');
+  c.dataset.track=t.id;c.dataset.r=r;c.dataset.s=s;
+  c.setAttribute('aria-label',drumNames[r]+' step '+(s+1));c.setAttribute('aria-pressed',String(t.notes[r][s]));
+  host.appendChild(c);
+ }
+}
+function renderDots(){const d=$('beatDots');if(!d)return;d.replaceChildren();for(let i=0;i<steps/4;i++){const el=document.createElement('div');el.className='dot'+(Math.floor(renderedStep/4)===i?' current':'');d.appendChild(el);}}
+function setCell(c,value){const t=c?.dataset.track?tracks.find(t=>t.id===Number(c.dataset.track)):currentTrack();if(!c||!c.classList.contains('cell')||!t)return;const r=Number(c.dataset.r),s=Number(c.dataset.s);if(!t.notes[r]||s>=steps||t.notes[r][s]===value)return;t.notes[r][s]=value;c.classList.toggle('on',value);c.setAttribute('aria-pressed',String(value));updateNoteCount();if(value)preview(t,r);}
+function addPaintHandlers(el){el.addEventListener('pointerdown',e=>{const c=e.target.closest('.cell');if(!c)return;e.preventDefault();painting=true;activePointer=e.pointerId;paintTo=!c.classList.contains('on');setCell(c,paintTo);});
+el.addEventListener('pointermove',e=>{if(!painting||e.pointerId!==activePointer)return;const hit=document.elementFromPoint(e.clientX,e.clientY);if(hit&&el.contains(hit))setCell(hit.closest('.cell'),paintTo);});}
+addPaintHandlers($('stepGrid'));
+addPaintHandlers($('drumStrip'));
 window.addEventListener('pointerup',()=>{painting=false;activePointer=null});window.addEventListener('pointercancel',()=>{painting=false;activePointer=null});
 async function audioCtx(){if(!context){context=new (window.AudioContext||window.webkitAudioContext)();mainGain=context.createGain();mainGain.gain.value=masterVolume;mainGain.connect(context.destination);}if(context.state==='suspended')await context.resume();return context;}
 const freq = midi => 440*Math.pow(2,(midi-69)/12);
@@ -76,8 +92,8 @@ async function preview(t,row){try{const ctx=await audioCtx(),g=ctx.createGain();
 function renderPlayhead(s){if(renderedStep===s)return;renderedStep=s;document.querySelectorAll('.cell.playing').forEach(c=>c.classList.remove('playing'));if(s>=0){document.querySelectorAll('.cell[data-s="'+s+'"]').forEach(c=>c.classList.add('playing'));}renderDots();}
 function animation(){if(!playing)return;const ct=context.currentTime;while(visualEvents.length&&visualEvents[0].time<=ct+.015){renderPlayhead(visualEvents.shift().step)}frame=requestAnimationFrame(animation);}
 function schedule(){if(!playing)return;while(nextTime<context.currentTime+.13){scheduleStep(context,mainGain,stepIndex,nextTime);visualEvents.push({step:stepIndex,time:nextTime});nextTime+=(60/bpm)/4;stepIndex=(stepIndex+1)%steps;}}
-async function play(){if(playing)return;try{await audioCtx();playing=true;stepIndex=0;nextTime=context.currentTime+.06;visualEvents=[];renderPlayhead(-1);schedule();timer=setInterval(schedule,25);frame=requestAnimationFrame(animation);$('playBtn').textContent='Ⅱ';status('Playing · '+bpm+' BPM');}catch(err){toast('Audio could not start: '+err.message);}}
-function stop(){playing=false;clearInterval(timer);cancelAnimationFrame(frame);visualEvents=[];renderedStep=999;renderPlayhead(-1);$('playBtn').textContent='▶';status('Stopped');}
+async function play(){if(playing)return;try{await audioCtx();playing=true;stepIndex=0;nextTime=context.currentTime+.06;visualEvents=[];renderPlayhead(-1);schedule();timer=setInterval(schedule,25);frame=requestAnimationFrame(animation);$('playBtn').textContent='Ⅱ';$('playBtn').setAttribute('aria-label','Pause');status('Playing · '+bpm+' BPM');}catch(err){toast('Audio could not start: '+err.message);}}
+function stop(){playing=false;clearInterval(timer);cancelAnimationFrame(frame);visualEvents=[];renderedStep=999;renderPlayhead(-1);$('playBtn').textContent='▶';$('playBtn').setAttribute('aria-label','Play');status('Stopped');}
 $('playBtn').addEventListener('click',()=>playing?stop():play());$('stopBtn').addEventListener('click',stop);
 $('bpm').addEventListener('input',e=>{bpm=Number(e.target.value);$('bpmValue').textContent=bpm;if(playing)status('Playing · '+bpm+' BPM');});
 $('bars').addEventListener('change',e=>{stop();steps=Number(e.target.value);render();});$('repeat').addEventListener('change',e=>repeat=Number(e.target.value));
@@ -86,7 +102,7 @@ $('voice').addEventListener('change',e=>{const t=currentTrack();t.voice=validVoi
 $('clearTrack').addEventListener('click',()=>{currentTrack().notes=cloneNotes(currentTrack().notes.length);renderEditor();toast('Track cleared');});
 $('addInstrument').addEventListener('click',()=>{const t=track('instrument','Instrument '+nextId);toast('Added '+t.name)});
 $('addDrums').addEventListener('click',()=>{track('drums','Beat track '+nextId);toast('Beat track added')});
-$('addSample').addEventListener('click',()=>audioFile.click());
+$('addSample').addEventListener('click',()=>audioFile.click());$('uploadBtn').addEventListener('click',()=>audioFile.click());
 async function loadSample(file){if(!file)return;if(file.size>20*1024*1024){toast('Choose an audio file under 20 MB');return;}try{status('Decoding '+file.name+'…');const ctx=await audioCtx(),data=await file.arrayBuffer(),buffer=await ctx.decodeAudioData(data.slice(0));const reader=new FileReader();const base64=await new Promise((resolve,reject)=>{reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(file)});const t=track('sample',file.name.replace(/\.[^.]+$/,''));t.sampleData=base64;t.sampleBuffer=buffer;render();toast('Sample added: '+file.name);status('Sample ready');}catch(e){toast('Could not decode this audio: '+e.message);status('Ready');}}
 audioFile.addEventListener('change',async e=>{await loadSample(e.target.files[0]);e.target.value='';});
 window.addEventListener('dragover',e=>{if(e.dataTransfer?.types.includes('Files'))e.preventDefault()});window.addEventListener('drop',e=>{if(e.dataTransfer?.files?.length){e.preventDefault();loadSample(e.dataTransfer.files[0]);}});
@@ -101,7 +117,7 @@ async function importProject(file){if(!file)return;try{const data=JSON.parse(awa
  if(t.type==='sample'&&typeof x.sampleData==='string'&&x.sampleData.startsWith('data:')&&x.sampleData.length<30e6){try{t.sampleData=x.sampleData;t.sampleBuffer=await(await audioCtx()).decodeAudioData(decodedDataUrl(x.sampleData));}catch(e){console.warn('Sample unavailable:',e);}}
  }if(!tracks.length)track('instrument','Piano','piano');selectedId=tracks[0].id;$('bpm').value=bpm;$('bpmValue').textContent=bpm;$('bars').value=steps;$('repeat').value=repeat;$('master').value=masterVolume*100;render();toast('Project opened');status('Project loaded');}catch(e){toast('Could not open project: '+e.message);}}
 projectFile.addEventListener('change',async e=>{await importProject(e.target.files[0]);e.target.value='';});
-$('newBtn').addEventListener('click',()=>{if(!confirm('Start a new song? Save your current project first if you want to keep it.'))return;stop();tracks=[];nextId=1;track('instrument','Piano','piano');toast('New song created');});
+$('newBtn').addEventListener('click',()=>{if(!confirm('Start a new song? Save your current project first if you want to keep it.'))return;stop();tracks=[];nextId=1;const base=track('instrument','Piano','piano');track('drums','Drum kit');selectedId=base.id;render();toast('New song created');});
 $('demoBtn').addEventListener('click',()=>{if(!confirm('Replace your current song with the demo beat?'))return;stop();steps=32;$('bars').value=32;initDemo();toast('Demo beat loaded');});
 function wavFromBuffer(buffer){const channels=Math.min(buffer.numberOfChannels,2),len=buffer.length,bytes=44+len*2*2,arr=new ArrayBuffer(bytes),view=new DataView(arr);let pos=0;
  const str=s=>{for(let i=0;i<s.length;i++)view.setUint8(pos++,s.charCodeAt(i))};const u16=n=>{view.setUint16(pos,n,true);pos+=2};const u32=n=>{view.setUint32(pos,n,true);pos+=4};
@@ -113,6 +129,21 @@ $('exportBtn').addEventListener('click',async()=>{const btn=$('exportBtn');if(bt
  const originals=tracks.map(t=>t.sampleBuffer);for(const t of tracks){if(t.type==='sample'&&t.sampleBuffer&&t.sampleBuffer.sampleRate!==rate){const src=t.sampleBuffer,converted=off.createBuffer(src.numberOfChannels,Math.ceil(src.duration*rate),rate);for(let ch=0;ch<src.numberOfChannels;ch++){const from=src.getChannelData(ch),to=converted.getChannelData(ch);for(let i=0;i<to.length;i++){const x=i*src.sampleRate/rate,j=Math.floor(x),a=x-j;to[i]=(from[Math.min(j,from.length-1)]||0)*(1-a)+(from[Math.min(j+1,from.length-1)]||0)*a;}}t.sampleBuffer=converted;}}
  try{for(let s=0;s<steps*repeat;s++)scheduleStep(off,out,s%steps,s*(60/bpm)/4);const result=await off.startRendering();download('song-maker-plus.wav',wavFromBuffer(result));toast('WAV exported successfully');status('WAV export complete');}finally{tracks.forEach((t,i)=>t.sampleBuffer=originals[i]);}
  }catch(e){toast('Export failed: '+e.message);console.error(e);}finally{btn.disabled=false;btn.textContent=old;}});
+function closePanels(){
+ for(const id of ['sidebar','settingsPanel','aboutPanel'])$(id).hidden=true;
+ $('overlay').hidden=true;
+ for(const id of ['tracksToggle','settingsToggle','aboutBtn'])$(id).setAttribute('aria-expanded','false');
+}
+function togglePanel(panelId,buttonId){
+ const wasHidden=$(panelId).hidden;closePanels();
+ if(wasHidden){$(panelId).hidden=false;$('overlay').hidden=false;$(buttonId).setAttribute('aria-expanded','true');}
+}
+$('tracksToggle').addEventListener('click',()=>togglePanel('sidebar','tracksToggle'));
+$('settingsToggle').addEventListener('click',()=>togglePanel('settingsPanel','settingsToggle'));
+$('aboutBtn').addEventListener('click',()=>togglePanel('aboutPanel','aboutBtn'));
+$('overlay').addEventListener('click',closePanels);
+document.querySelectorAll('[data-close-panel]').forEach(x=>x.addEventListener('click',closePanels));
+window.addEventListener('keydown',e=>{if(e.key==='Escape')closePanels()});
 window.addEventListener('keydown',e=>{const target=e.target;if(e.code==='Space'&&target.tagName!=='INPUT'&&target.tagName!=='SELECT'&&target.tagName!=='BUTTON'&&!e.repeat){e.preventDefault();playing?stop():play();}});
-track('instrument','Piano','piano');status('Ready to make music');
+const base=track('instrument','Piano','piano');track('drums','Drum kit');selectedId=base.id;render();status('Ready to make music');
 })();
